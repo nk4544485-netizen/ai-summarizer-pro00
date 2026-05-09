@@ -51,19 +51,21 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fdfdff] text-gray-800 font-sans selection:bg-violet-200 selection:text-violet-900">
+    <div className="min-h-screen font-sans selection:bg-violet-200 selection:text-violet-900">
       {/* Navbar */}
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <nav className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Layers className="h-8 w-8 text-[#7e34f6]" />
-              <span className="ml-2 text-xl font-bold text-gray-900 tracking-tight">Summarizer<span className="text-[#7e34f6]">Pro</span></span>
+            <div className="flex items-center group cursor-pointer">
+              <div className="premium-gradient p-1.5 rounded-xl group-hover:rotate-6 transition-transform">
+                <Layers className="h-6 w-6 text-white" />
+              </div>
+              <span className="ml-3 text-xl font-bold text-gray-900 tracking-tight">Summarizer<span className="text-[#7e34f6]">Pro</span></span>
             </div>
-            <div className="flex items-center space-x-6">
-              <a href="#" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">AI Tools</a>
-              <a href="#" className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors">Features</a>
-              <button className="bg-[#7e34f6] hover:bg-violet-700 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors">
+            <div className="flex items-center space-x-8">
+              <a href="#" className="text-gray-500 hover:text-[#7e34f6] text-sm font-semibold transition-colors">AI Tools</a>
+              <a href="#" className="text-gray-500 hover:text-[#7e34f6] text-sm font-semibold transition-colors">Features</a>
+              <button className="premium-gradient text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-violet-200 hover:scale-105 active:scale-95 transition-all">
                 Try For Free
               </button>
             </div>
@@ -73,40 +75,40 @@ function App() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Hero Section */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center justify-center px-4 py-1.5 mb-6 rounded-full bg-violet-100 text-[#7e34f6] font-semibold text-sm">
-            <Sparkles size={16} className="mr-2" />
+        <div className="text-center mb-16 animate-float">
+          <div className="inline-flex items-center justify-center px-4 py-1.5 mb-6 rounded-full bg-violet-100 text-[#7e34f6] font-bold text-xs uppercase tracking-wider">
+            <Sparkles size={14} className="mr-2" />
             AI-Powered Document Intelligence
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-6 tracking-tight">
-            Distill Knowledge with <span className="text-[#7e34f6]">Precision</span>
+          <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-6 tracking-tight">
+            Distill Knowledge with <span className="text-[#7e34f6] bg-clip-text text-transparent premium-gradient">Precision</span>
           </h1>
-          <p className="max-w-2xl mx-auto text-lg text-gray-600">
+          <p className="max-w-2xl mx-auto text-lg text-gray-600 leading-relaxed">
             Upload any PDF and let our advanced AI generate tailored summaries based on your specific persona and objectives.
           </p>
         </div>
 
         {/* Error Alert */}
         {error && (
-          <div className="max-w-5xl mx-auto mb-8 bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg shadow-sm">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
+          <div className="max-w-5xl mx-auto mb-8 bg-red-50 border-l-4 border-red-500 p-5 rounded-r-2xl shadow-xl animate-in fade-in slide-in-from-top-4">
+            <div className="flex items-center">
+              <div className="bg-red-100 p-2 rounded-full">
+                <X className="h-5 w-5 text-red-600" />
               </div>
-              <div className="ml-3">
-                <p className="text-sm text-red-700">{error}</p>
+              <div className="ml-4">
+                <p className="text-sm font-bold text-red-800">{error}</p>
               </div>
             </div>
           </div>
         )}
 
         {/* Main Content Grid */}
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          <InputPanel onSubmit={handleSummarize} isLoading={isLoading} />
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+          <div className="glass-card rounded-3xl p-1 hover-lift">
+            <InputPanel onSubmit={handleSummarize} isLoading={isLoading} />
+          </div>
           
-          <div className="h-full min-h-[500px]">
+          <div className="glass-card rounded-3xl p-1 h-full min-h-[500px] hover-lift">
             <ResultDisplay summary={summary} />
           </div>
         </div>
