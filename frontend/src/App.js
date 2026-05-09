@@ -31,13 +31,15 @@ function App() {
       if (!err.response) {
         setError("Backend server is offline. Please make sure the FastAPI server is running on port 8000.");
       } else if (err.response.data && err.response.data.detail) {
-        const detail = err.response.data.detail.toLowerCase();
+        const detailRaw = err.response.data.detail;
+        const detailString = typeof detailRaw === 'string' ? detailRaw : JSON.stringify(detailRaw);
+        const detail = detailString.toLowerCase();
         if (detail.includes("api key")) {
           setError("Invalid Gemini API Key. Please verify your backend/.env file.");
         } else if (detail.includes("safety") || detail.includes("blocked")) {
           setError("Summary blocked by Gemini Safety Filters. The content may be too sensitive.");
         } else {
-          setError("Failed to generate summary: " + err.response.data.detail);
+          setError("Failed to generate summary: " + detailString);
         }
       } else {
         setError("Failed to generate summary: " + err.message);

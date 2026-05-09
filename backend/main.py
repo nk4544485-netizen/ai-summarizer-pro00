@@ -59,7 +59,7 @@ async def startup_event():
 async def summarize_pdf(
     file: UploadFile = File(...),
     persona: str = Form(...),
-    goal: str = Form(...)
+    goal: str = Form("")
 ):
     try:
         # Extract text from PDF
@@ -93,7 +93,7 @@ async def summarize_pdf(
         prompt = f"Goal: {goal if goal else 'Provide a comprehensive summary'}\n\nPlease summarize the following text according to the goal and your persona.\n\nText:\n{text[:15000]}"
 
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=system_instruction)
+            model = genai.GenerativeModel('gemini-2.0-flash', system_instruction=system_instruction)
             response = model.generate_content(prompt)
         except Exception as api_err:
             print(f"Gemini API Error: {api_err}")
@@ -114,6 +114,8 @@ async def summarize_pdf(
 
         return JSONResponse(content={"summary": summary})
 
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = str(e)
         if "API_KEY_INVALID" in error_msg:
