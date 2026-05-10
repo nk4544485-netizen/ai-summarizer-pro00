@@ -6,15 +6,78 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ----------------- Custom Design -----------------
+# ----------------- Custom Design Injector -----------------
 def inject_custom_design():
     st.markdown("""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        .stApp { background: linear-gradient(135deg, #f5f3ff 0%, #fdf2f8 100%); font-family: 'Inter', sans-serif; }
-        h1, h2, h3, h4 { color: #1e293b !important; font-weight: 800 !important; }
-        .stButton>button { background-color: #7c3aed !important; color: white !important; border-radius: 10px !important; border: none !important; width: 100%; font-weight: 600; }
-        [data-testid="stVerticalBlockBorderWrapper"] { background-color: white; border-radius: 15px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); border: 1px solid #f1f5f9 !important; padding: 20px; }
+        
+        /* Global Text Visibility Fix */
+        html, body, [data-testid="stWidgetLabel"], .stText, p, h1, h2, h3, h4, span, label {
+            color: #1E1E2E !important; /* Dark Navy for visibility */
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .stApp {
+            background: linear-gradient(135deg, #f5f3ff 0%, #fdf2f8 100%);
+        }
+        
+        /* Hero Section */
+        .hero-title {
+            font-size: 3.5rem !important;
+            font-weight: 800 !important;
+            text-align: center;
+            background: linear-gradient(90deg, #7c3aed 0%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem !important;
+        }
+        
+        .hero-subtitle {
+            text-align: center;
+            color: #4B5563 !important;
+            font-size: 1.2rem;
+            margin-bottom: 3rem;
+        }
+        
+        /* Feature Cards */
+        .feature-card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+        
+        .feature-card p {
+            color: #4B5563 !important; /* Professional Grey for descriptions */
+        }
+        
+        /* Buttons */
+        .stButton>button {
+            background-color: #7c3aed !important;
+            color: white !important;
+            border-radius: 10px !important;
+            padding: 0.75rem 2rem !important;
+            font-weight: 600 !important;
+            border: none !important;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+        
+        .stButton>button:hover {
+            background-color: #6d28d9 !important;
+            box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.4) !important;
+        }
+
+        /* Upload Component */
+        [data-testid="stFileUploader"] {
+            border: 2px dashed #7c3aed;
+            border-radius: 15px;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.5);
+        }
         </style>
     """, unsafe_allow_html=True)
 
@@ -25,88 +88,95 @@ inject_custom_design()
 api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
 
 if not api_key:
-    st.warning("⚠️ API Key is missing. Add GEMINI_API_KEY to Streamlit Secrets.")
+    st.warning("⚠️ GEMINI_API_KEY is missing in Secrets.")
     st.stop()
 
 genai.configure(api_key=api_key)
 
 def extract_text(file):
-    try:
-        doc = fitz.open(stream=file.read(), filetype="pdf")
-        text = "".join([page.get_text() for page in doc])
-        return text.strip()
-    except Exception as e:
-        return f"ERROR_EXTRACTION: {str(e)}"
+    doc = fitz.open(stream=file.read(), filetype="pdf")
+    return "".join([page.get_text() for page in doc]).strip()
 
 def generate_summary(text, persona, goal):
-    # Models to try
-    model_names = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro']
+    # Model Fix: Using gemini-1.5-flash as requested
+    model_name = 'gemini-1.5-flash'
     
-    # Safety settings to prevent blocking
-    safety_settings = [
-        {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-        {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-        {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-        {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-    ]
+    try:
+        instructions = f"You are an AI assistant helping a {persona}. Goal: {goal}"
+        model = genai.GenerativeModel(model_name=model_name, system_instruction=instructions)
+        
+        response = model.generate_content(
+            f"Please summarize the following PDF text:\n\n{text[:15000]}",
+            safety_settings=[
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+            ]
+        )
+        return response.text
+    except Exception as e:
+        if "404" in str(e) or "not found" in str(e).lower():
+            return f"❌ Model Error (404): The model '{model_name}' was not found. Please verify your API key supports this model or check the Google AI model list."
+        return f"❌ AI Error: {str(e)}"
 
-    for model_name in model_names:
-        try:
-            instructions = f"You are a professional assistant helping a {persona}. Your goal is: {goal}"
-            model = genai.GenerativeModel(model_name=model_name, system_instruction=instructions)
-            
-            # Use a slightly smaller chunk to be safe with tokens
-            content_to_send = text[:20000] 
-            
-            response = model.generate_content(
-                f"Summarize the following PDF text professionally:\n\n{content_to_send}",
-                safety_settings=safety_settings
-            )
-            
-            if response and response.text:
-                return response.text
-            else:
-                continue
-        except Exception as e:
-            if model_name == model_names[-1]:
-                return f"Final API Error: {str(e)}"
-            continue
-    return "Failed to generate summary with any model."
+# ----------------- UI Content -----------------
 
-# ----------------- UI -----------------
-st.markdown("<h1 style='text-align: center;'>🧠 MindMap AI V2</h1>", unsafe_allow_html=True)
+# Navbar
+st.markdown("""
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 5%;">
+        <div style="font-weight: 800; font-size: 1.5rem; color: #1E1E2E;">
+            <span style="background: #7c3aed; color: white; padding: 4px 10px; border-radius: 8px;">M</span>
+            MindMap AI
+        </div>
+    </div>
+""", unsafe_allow_html=True)
 
+# Hero Section
+st.markdown('<h1 class="hero-title">Free AI PDF Summarizer</h1>', unsafe_allow_html=True)
+st.markdown('<p class="hero-subtitle">Summarize Any PDF Instantly into a Visual Mind Map.</p>', unsafe_allow_html=True)
+
+# Main Tool
 col1, col2 = st.columns([1, 1.2], gap="large")
 
 with col1:
-    with st.container(border=True):
-        st.markdown("### 🛠️ Configuration")
-        persona = st.selectbox("Persona", ["Student", "Professional", "Researcher", "General"])
-        goal = st.text_area("Specific Goal", placeholder="e.g. Extract only the financial metrics...")
-        uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
-        
-        if st.button("Generate Summary", type="primary"):
-            if uploaded_file:
-                with st.spinner("Extracting and Summarizing..."):
-                    # 1. Extract Text
-                    text = extract_text(uploaded_file)
-                    
-                    if not text:
-                        st.error("❌ Could not extract any text from this PDF. It might be an image scan or encrypted.")
-                    elif text.startswith("ERROR_EXTRACTION"):
-                        st.error(f"❌ PDF Error: {text}")
-                    else:
-                        st.info(f"✅ Extracted {len(text)} characters. Sending to Gemini...")
-                        # 2. Generate Summary
-                        summary = generate_summary(text, persona, goal)
-                        st.session_state['summary'] = summary
-            else:
-                st.error("Please upload a PDF file first.")
+    st.markdown('<div class="feature-card">', unsafe_allow_html=True)
+    st.markdown("### ⚙️ Document Setup")
+    persona = st.selectbox("Select Persona", ["Student", "Professional", "Researcher", "General"])
+    goal = st.text_area("What is your goal? (Optional)", placeholder="e.g. Extract key facts...")
+    st.markdown("#### Upload PDF Document")
+    uploaded_file = st.file_uploader("Upload PDF", type=["pdf"], label_visibility="collapsed")
+    
+    if st.button("Generate Summary"):
+        if uploaded_file:
+            with st.spinner("Processing..."):
+                text = extract_text(uploaded_file)
+                if text:
+                    st.session_state['summary'] = generate_summary(text, persona, goal)
+                else:
+                    st.error("❌ Could not extract text from PDF.")
+        else:
+            st.error("Please upload a PDF.")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 with col2:
-    with st.container(border=True):
-        st.markdown("### 📝 Analysis Result")
-        if 'summary' in st.session_state:
-            st.markdown(st.session_state['summary'])
-        else:
-            st.markdown("<div style='height: 300px; display: flex; align-items: center; justify-content: center; color: #94a3b8; border: 1px dashed #e2e8f0; border-radius: 10px;'>Your summary will appear here...</div>", unsafe_allow_html=True)
+    if 'summary' in st.session_state:
+        st.markdown('<div class="feature-card" style="min-height: 450px;">', unsafe_allow_html=True)
+        st.markdown("### 📝 AI Result")
+        st.markdown(st.session_state['summary'])
+        st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="feature-card" style="min-height: 450px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">', unsafe_allow_html=True)
+        st.markdown("<div style='font-size: 4rem;'>📄</div>", unsafe_allow_html=True)
+        st.markdown("<h4>No Summary Yet</h4>", unsafe_allow_html=True)
+        st.markdown("<p>Upload a document and click 'Generate Summary' to see results here.</p>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# Who Benefits Section
+st.divider()
+st.markdown("<h2 style='text-align: center; margin-bottom: 2rem;'>Who Benefits from MindMap AI?</h2>", unsafe_allow_html=True)
+b_col1, b_col2 = st.columns(2)
+with b_col1:
+    st.markdown('<div class="feature-card"><h4>🎓 For Students</h4><p>Convert long textbooks into easy study notes and definitions.</p></div>', unsafe_allow_html=True)
+with b_col2:
+    st.markdown('<div class="feature-card"><h4>💼 For Professionals</h4><p>Quickly extract action items and metrics from long reports.</p></div>', unsafe_allow_html=True)
