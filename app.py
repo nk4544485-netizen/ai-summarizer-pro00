@@ -6,6 +6,9 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 import tempfile
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ----------------- Configuration -----------------
 st.set_page_config(page_title="MindMap AI V2", page_icon="🧠", layout="centered")
