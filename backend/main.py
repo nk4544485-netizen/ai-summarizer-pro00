@@ -56,6 +56,7 @@ async def cleanup_old_exports():
 
 @app.on_event("startup")
 async def startup_event():
+    os.makedirs("exports", exist_ok=True)
     # API Listing: Show all models available to this key
     print("\n" + "="*50)
     print("Listing available Gemini models for your API key:")
@@ -172,5 +173,5 @@ async def generate_pdf(request: PDFRequest):
 
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.environ.get("PORT", 10000))
     uvicorn.run(app, host="0.0.0.0", port=port)
