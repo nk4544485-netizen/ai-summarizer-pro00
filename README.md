@@ -33,9 +33,14 @@ streamlit run app.py
 ```
 
 ## Deployment
-This application is fully prepared for **Streamlit Community Cloud**:
+This application is fully prepared for **Render** (Web Service):
 1. Push this repository to GitHub.
-2. Go to [share.streamlit.io](https://share.streamlit.io).
-3. Select your repository, set the main file path to `app.py`.
-4. In the Advanced Settings, paste your `GEMINI_API_KEY` into the Secrets box.
-5. Click Deploy!
+2. Go to [Render](https://render.com) and create a new **Web Service**.
+3. Connect your GitHub repository.
+4. Set the following configuration:
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `streamlit run app.py --server.port $PORT --server.address 0.0.0.0`
+5. In the **Environment Variables** section, add:
+   - Key: `GEMINI_API_KEY`
+   - Value: `your_google_gemini_api_key_here`
+6. Click **Deploy**!
