@@ -1,10 +1,10 @@
 @echo off
-echo Starting AI Summarizer Pro...
-
-echo Starting Backend Server...
-start cmd /k "cd backend && ..\.venv\Scripts\python.exe -m uvicorn main:app --reload --port 8000"
-
-echo Starting Frontend Server...
-start cmd /k "cd frontend && IF NOT EXIST node_modules\ (echo Installing dependencies... && npm install) && npm start"
-
-echo Both servers are starting up!
+echo ===================================================
+echo   AI Summarizer Pro V2 - Launching Dev Environment
+echo ===================================================
+echo.
+echo Cleaning Vite Cache...
+if exist node_modules\.vite (rmdir /s /q node_modules\.vite)
+echo Starting Vite Dev Server...
+npm run dev
+pause

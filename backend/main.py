@@ -1,16 +1,19 @@
 import os
+import asyncio
+import time
+
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import uvicorn
+
 import fitz  # PyMuPDF
-import asyncio
-import time
 import google.generativeai as genai
+from dotenv import load_dotenv
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
-from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -19,7 +22,7 @@ app = FastAPI()
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:3000")],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,6 +35,7 @@ if not api_key:
 else:
     genai.configure(api_key=api_key)
 
+
 async def cleanup_old_exports():
     """Background task to delete PDF files in exports/ older than 24 hours."""
     while True:
@@ -42,18 +46,31 @@ async def cleanup_old_exports():
                 for filename in os.listdir(exports_dir):
                     filepath = os.path.join(exports_dir, filename)
                     if os.path.isfile(filepath):
-                        # Delete if older than 24 hours (86400 seconds)
                         if current_time - os.path.getmtime(filepath) > 86400:
                             os.remove(filepath)
                             print(f"Deleted old export: {filename}")
         except Exception as e:
             print(f"Cleanup error: {e}")
-        # Sleep for 1 hour before checking again
         await asyncio.sleep(3600)
+
 
 @app.on_event("startup")
 async def startup_event():
+    # API Listing: Show all models available to this key
+    print("\n" + "="*50)
+    print("Listing available Gemini models for your API key:")
+    print("="*50)
+    if api_key:
+        try:
+            [print(m.name) for m in genai.list_models()]
+        except Exception as e:
+            print(f"Error listing models: {e}")
+    else:
+        print("No API key configured — skipping model list.")
+    print("="*50 + "\n")
+
     asyncio.create_task(cleanup_old_exports())
+
 
 @app.post("/summarize")
 async def summarize_pdf(
@@ -61,6 +78,9 @@ async def summarize_pdf(
     persona: str = Form(...),
     goal: str = Form("")
 ):
+    if not api_key:
+        raise HTTPException(status_code=500, detail="Server is not configured with a Gemini API key.")
+
     try:
         # Extract text from PDF
         pdf_content = await file.read()
@@ -68,24 +88,16 @@ async def summarize_pdf(
         text = ""
         for page in doc:
             text += page.get_text()
-            
+
         if not text.strip():
             raise HTTPException(status_code=400, detail="Could not extract text from the PDF.")
 
         # Persona-Driven Prompting Logic
-        # This section dynamically changes the system instruction based on the user's selected persona.
-        # It ensures the LLM's output format, tone, and focus area are tailored to the specific needs of the user.
         if persona.lower() == "student":
-            # The Student persona forces the LLM to act as a tutor, prioritizing clear definitions, 
-            # essential concepts, and easily digestible study notes.
             system_instruction = "You are an AI assistant helping a student. Focus on definitions, key concepts, and study notes."
         elif persona.lower() == "professional":
-            # The Professional persona instructs the LLM to generate an executive-style summary,
-            # highlighting actionable items, critical metrics, and business impact.
             system_instruction = "You are an AI assistant helping a professional. Focus on action items, metrics, and executive summaries."
         elif persona.lower() == "researcher":
-            # The Researcher persona shifts the focus to academic rigor, requiring the LLM to extract
-            # underlying methodologies, core findings, and provide critical analysis of the text.
             system_instruction = "You are an AI assistant helping a researcher. Focus on methodology, findings, and critical analysis."
         else:
             system_instruction = "You are a helpful AI assistant."
@@ -93,65 +105,71 @@ async def summarize_pdf(
         prompt = f"Goal: {goal if goal else 'Provide a comprehensive summary'}\n\nPlease summarize the following text according to the goal and your persona.\n\nText:\n{text[:15000]}"
 
         try:
-            model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=system_instruction)
+            model = genai.GenerativeModel('gemini-3-flash-preview', system_instruction=system_instruction)
             response = model.generate_content(prompt)
-        except Exception as api_err:
-            print(f"Gemini API Error: {api_err}")
-            raise HTTPException(status_code=500, detail=f"Gemini API Error: {str(api_err)}")
-        
+        except Exception as e:
+            print(f"DEBUG ERROR: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Gemini API Error: {str(e)}")
+
         # Check if the response was blocked by safety filters
         if not response.candidates or not response.candidates[0].content.parts:
-            # Check the block reason if available
             block_reason = "Unknown reason"
-            if hasattr(response, 'prompt_feedback') and response.prompt_feedback.block_reason:
+            if hasattr(response, 'prompt_feedback') and response.prompt_feedback and response.prompt_feedback.block_reason:
                 block_reason = f"Safety Block: {response.prompt_feedback.block_reason}"
             elif response.candidates and response.candidates[0].finish_reason:
                 block_reason = f"Finish Reason: {response.candidates[0].finish_reason}"
-            
-            raise HTTPException(status_code=400, detail=f"Gemini API could not generate a summary. Reason: {block_reason}")
+            raise HTTPException(status_code=400, detail=f"Gemini could not generate a summary. Reason: {block_reason}")
 
         summary = response.text
-
         return JSONResponse(content={"summary": summary})
 
     except HTTPException:
         raise
     except Exception as e:
         error_msg = str(e)
+        print(f"DEBUG ERROR: {error_msg}")
         if "API_KEY_INVALID" in error_msg:
             raise HTTPException(status_code=401, detail="Invalid Gemini API Key. Please check your .env file.")
         elif "Safety" in error_msg or "blocked" in error_msg.lower():
             raise HTTPException(status_code=400, detail=f"Content blocked by Gemini safety filters: {error_msg}")
-        
-        print(f"Error: {e}")
         raise HTTPException(status_code=500, detail=error_msg)
 
-from pydantic import BaseModel
+
 class PDFRequest(BaseModel):
     text: str
+
+@app.get("/models")
+async def get_models():
+    if not api_key:
+        raise HTTPException(status_code=500, detail="Server is not configured with a Gemini API key.")
+    try:
+        models = [m.name.replace('models/', '') for m in genai.list_models()]
+        return JSONResponse(content={"models": models})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 @app.post("/generate-pdf")
 async def generate_pdf(request: PDFRequest):
     try:
-        # Ensure exports directory exists
         os.makedirs("exports", exist_ok=True)
         filename = "exports/summary_output.pdf"
         doc = SimpleDocTemplate(filename, pagesize=letter)
         styles = getSampleStyleSheet()
         story = []
-        
-        # Split text by newlines and add to story
+
         for p in request.text.split('\n'):
             if p.strip():
-                # Replace common markdown chars to prevent ReportLab errors
                 clean_p = p.replace("**", "").replace("*", "").replace("#", "")
                 story.append(Paragraph(clean_p, styles["Normal"]))
                 story.append(Spacer(1, 12))
-                
+
         doc.build(story)
         return FileResponse(filename, media_type='application/pdf', filename=filename)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))

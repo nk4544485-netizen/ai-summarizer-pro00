@@ -1,97 +1,68 @@
 # AI Summarizer Pro
 
-A full-stack web application that uses AI to summarize PDF documents into concise, persona-tailored summaries.
-
-## Tech Stack
-
-### Backend
-- **Framework**: FastAPI (Python)
-- **AI Integration**: Google Gemini API
-- **PDF Processing**: PyMuPDF (fitz)
-- **PDF Generation**: ReportLab
-- **Server**: Uvicorn ASGI
-- **File Upload**: python-multipart
-- **Environment**: python-dotenv
-
-### Frontend
-- **Framework**: React 18.2.0
-- **Styling**: Tailwind CSS with @tailwindcss/typography
-- **Icons**: Lucide React
-- **HTTP Client**: Axios
-- **Build Tool**: Create React App
-- **Desktop App**: Electron
-
-### Infrastructure
-- **Language**: Python 3.13 (backend), Node.js (frontend)
-- **Deployment**: Render (Web Service + Static Site)
-- **Version Control**: Git
+AI Summarizer Pro is a full-stack application that leverages Google's Gemini AI to summarize large PDF documents quickly and accurately. It features a modern React frontend and a robust FastAPI backend.
 
 ## Features
+- **PDF Text Extraction**: Securely extracts text from PDFs.
+- **Gemini AI Integration**: Uses the latest Gemini 3.1 Flash Preview models.
+- **Persona-based Summaries**: Tailors the summary to Students, Professionals, or Researchers.
+- **Export to PDF**: Download the generated summary as a clean, formatted PDF.
 
-- **Persona-Based Summarization**: Choose from Student, Professional, or Researcher personas
-- **Custom Goals**: Provide specific instructions for tailored summaries
-- **Drag & Drop Upload**: Intuitive PDF upload with validation (max 10MB)
-- **Real-Time Markdown Rendering**: Rich text display with copy functionality
-- **PDF Export**: One-click conversion to downloadable PDF
-- **Desktop App Support**: Run as native desktop application with Electron
-- **Automated Cleanup**: Background task removes old exports after 24 hours
+## Tech Stack
+- **Frontend**: React, Vite, TailwindCSS, jsPDF
+- **Backend**: Python, FastAPI, Uvicorn, Google Generative AI SDK, PyMuPDF
 
-## Local Development
+## Prerequisites
+- Node.js (v18 or higher)
+- Python (3.10 or higher)
+- A Google Gemini API Key
 
-### Prerequisites
-- Python 3.13+
-- Node.js 16+
-- Google Gemini API Key (free at https://makersuite.google.com/app/apikey)
+## Setup & Installation
 
-### Setup
-1. Clone the repository
-2. Backend: `cd backend && pip install -r requirements.txt`
-3. Frontend: `cd frontend && npm install`
-4. Add your `GEMINI_API_KEY` to `backend/.env`
-5. Run: `./start.bat` (Windows) or start servers manually
-
-## Deployment Guide
-
-### Backend (Render Web Service)
-- **Root Directory**: `backend`
-- **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-- **Environment Variables**:
-  - `GEMINI_API_KEY`: Your Google Gemini API key
-  - `FRONTEND_URL`: Your frontend URL (e.g., https://your-frontend.onrender.com)
-
-### Frontend (Render Static Site)
-- **Root Directory**: `frontend`
-- **Build Command**: `npm run build`
-- **Publish Directory**: `build`
-- **Environment Variables**:
-  - `REACT_APP_API_URL`: Your backend URL (e.g., https://your-backend.onrender.com)
-
-### Desktop App (Optional)
-- Build with: `cd frontend && npm run dist`
-- Creates executable in `frontend/dist/`
-
-## Usage
-
-1. Select a persona and enter a goal
-2. Upload a PDF file
-3. Click "Generate Summary"
-4. View, copy, or export the summary
-
-## License
-
-MIT
+### 1. Backend Setup
+Navigate to the `backend` directory and set up the environment:
 ```bash
-cd frontend
+cd backend
+python -m venv .venv
+# Activate the virtual environment:
+# Windows: .venv\Scripts\activate
+# Mac/Linux: source .venv/bin/activate
+
+pip install -r requirements.txt
+```
+
+Create a `.env` file in the `backend` directory (you can copy `.env.example`):
+```env
+GEMINI_API_KEY=your_google_gemini_api_key_here
+PORT=8000
+FRONTEND_URL=http://localhost:5555
+```
+
+### 2. Frontend Setup
+Navigate back to the project root and install the dependencies:
+```bash
+cd ..
 npm install
 ```
 
-### 3. Running the Application
-You can run both servers simultaneously using the provided `start.bat` file (Windows) in the root directory:
+## Running the Application
+
+### Start the Backend
+Open a terminal, activate your virtual environment, and run:
 ```bash
+cd backend
+python main.py
+```
+The backend will run on `http://localhost:8000`.
+
+### Start the Frontend
+In a new terminal, run:
+```bash
+npm run dev
+# OR use the provided batch script on Windows:
 .\start.bat
 ```
-Alternatively, run them separately:
-- **Backend**: `cd backend && python -m uvicorn main:app --reload --port 8000`
-- **Frontend**: `cd frontend && npm start`
+The frontend will start on `http://localhost:5555/`.
 
-The application will be available at `http://localhost:3000`.
+## Contributing
+Feel free to open issues or submit pull requests for any improvements or bug fixes.
