@@ -12,7 +12,7 @@ def inject_custom_design():
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         
-        /* Global Text Visibility Fix - Dark Navy */
+        /* Global Text Visibility */
         html, body, [data-testid="stWidgetLabel"], .stText, p, h1, h2, h3, h4, span, label {
             color: #1E1E2E !important; 
             font-family: 'Inter', sans-serif;
@@ -33,14 +33,15 @@ def inject_custom_design():
             margin-bottom: 0.5rem !important;
         }
         
-        /* Feature Cards */
-        .feature-card {
-            background: white;
-            border-radius: 15px;
-            padding: 2rem;
-            margin-bottom: 1rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-            border: 1px solid #e2e8f0;
+        /* Summary Result Visibility - Solid Deep Black */
+        .summary-content {
+            color: #000000 !important;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        
+        .summary-content p, .summary-content li, .summary-content div {
+            color: #000000 !important;
         }
         
         /* Buttons */
@@ -52,6 +53,14 @@ def inject_custom_design():
             font-weight: 600 !important;
             border: none !important;
             width: 100%;
+        }
+
+        [data-testid="stVerticalBlockBorderWrapper"] {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid #f1f5f9 !important;
+            padding: 20px;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -73,15 +82,12 @@ def extract_text(file):
     return "".join([page.get_text() for page in doc]).strip()
 
 def generate_summary(text, persona, goal):
-    # Model List for 2026 Fallback Logic
     model_list = ['gemini-3.1-flash-lite', 'gemini-3-flash-preview', 'gemini-2.5-flash']
-    
     last_error = ""
     for model_name in model_list:
         try:
             instructions = f"You are a professional assistant helping a {persona}. Goal: {goal}"
             model = genai.GenerativeModel(model_name=model_name, system_instruction=instructions)
-            
             response = model.generate_content(
                 f"Please provide a clear summary of this PDF content:\n\n{text[:20000]}",
                 safety_settings=[
@@ -95,21 +101,19 @@ def generate_summary(text, persona, goal):
         except Exception as e:
             last_error = str(e)
             if "404" in last_error or "not found" in last_error.lower():
-                continue # Try next model
+                continue
             else:
                 return f"❌ AI Error: {last_error}"
-                
-    return f"❌ Failed to reach any AI model. Last error: {last_error}"
+    return f"❌ Error: {last_error}"
 
 # ----------------- UI Content -----------------
 st.markdown('<h1 class="hero-title">Free AI PDF Summarizer</h1>', unsafe_allow_html=True)
-st.markdown('<p style="text-align: center; color: #4B5563; margin-bottom: 2rem;">Summarize Any PDF Instantly with Gemini 3.1 Flash-Lite</p>', unsafe_allow_html=True)
 
 col1, col2 = st.columns([1, 1.2], gap="large")
 
 with col1:
     with st.container(border=True):
-        st.markdown("### ⚙️ Setup")
+        st.markdown("### ⚙️ Document Setup")
         persona = st.selectbox("Persona", ["Student", "Professional", "Researcher", "General"])
         goal = st.text_area("Goal", placeholder="What do you want to extract?")
         uploaded_file = st.file_uploader("Upload PDF", type=["pdf"])
@@ -121,14 +125,15 @@ with col1:
                     if text:
                         st.session_state['summary'] = generate_summary(text, persona, goal)
                     else:
-                        st.error("❌ Could not extract text from PDF.")
+                        st.error("❌ Could not extract text.")
             else:
                 st.error("Please upload a PDF.")
 
 with col2:
     with st.container(border=True):
-        st.markdown("### 📝 AI Analysis")
+        st.markdown("### 📝 AI Analysis Result")
         if 'summary' in st.session_state:
-            st.markdown(st.session_state['summary'])
+            # Wrap the summary in a div with the summary-content class for high visibility
+            st.markdown(f'<div class="summary-content">{st.session_state["summary"]}</div>', unsafe_allow_html=True)
         else:
             st.markdown("<div style='height: 300px; display: flex; align-items: center; justify-content: center; color: #94a3b8;'>Your summary will appear here.</div>", unsafe_allow_html=True)
