@@ -19,6 +19,10 @@ load_dotenv()
 
 app = FastAPI()
 
+@app.get("/")
+async def root():
+    return {"status": "AI Summarizer Backend is running!"}
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
